@@ -1,0 +1,11 @@
+server:
+  port: 8088
+
+spring:
+  tomcat:
+    max-part-header-size: 16KB
+    max-swallow-size: 100MB
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
