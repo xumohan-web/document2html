@@ -30,9 +30,7 @@ public class DocFileContentConverter implements FileContentConverter {
                     html.append(HtmlBuilderUtils.paragraph(text));
                 }
             }
-            ImportResult result = new ImportResult();
-            result.setRichTextContent(HtmlBuilderUtils.wrapDiv(html.toString()));
-            return result;
+            return ImportResult.ofHtml(HtmlBuilderUtils.wrapDiv(html.toString()));
         }
     }
 }

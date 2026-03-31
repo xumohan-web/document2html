@@ -1,11 +1,15 @@
 package org.mohan.docimport.service.impl;
 
 import org.mohan.docimport.converter.FileContentConverter;
+import org.mohan.docimport.exception.DocumentImportException;
+import org.mohan.docimport.exception.FileConversionException;
+import org.mohan.docimport.exception.InvalidFileException;
+import org.mohan.docimport.exception.UnsupportedFileException;
 import org.mohan.docimport.model.DocumentConvertContext;
 import org.mohan.docimport.model.DownloadedFile;
-import org.mohan.docimport.model.FileTypeEnum;
 import org.mohan.docimport.model.ImportResult;
 import org.mohan.docimport.service.DocumentImportService;
+import org.mohan.docimport.util.FileTypeDetector;
 import org.mohan.docimport.util.RemoteFileDownloadUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,33 +24,38 @@ import java.util.List;
 public class DocumentImportServiceImpl implements DocumentImportService {
 
     private final List<FileContentConverter> converters;
+    private final FileTypeDetector fileTypeDetector;
+    private final RemoteFileDownloadUtils remoteFileDownloadUtils;
 
-    public DocumentImportServiceImpl(List<FileContentConverter> converters) {
+    public DocumentImportServiceImpl(
+            List<FileContentConverter> converters,
+            FileTypeDetector fileTypeDetector,
+            RemoteFileDownloadUtils remoteFileDownloadUtils
+    ) {
         this.converters = converters;
+        this.fileTypeDetector = fileTypeDetector;
+        this.remoteFileDownloadUtils = remoteFileDownloadUtils;
     }
 
     @Override
     public String importFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("文件不能为空");
+            throw new InvalidFileException("文件不能为空");
         }
         try {
             return importFile(file.getOriginalFilename(), file.getBytes(), file.getContentType());
         } catch (IOException ex) {
-            throw new IllegalStateException("读取上传文件失败", ex);
+            throw new FileConversionException("读取上传文件失败", ex);
         }
     }
 
     @Override
     public String importFile(String fileName, byte[] content, String contentType) {
-        FileTypeEnum fileType = FileTypeEnum.of(fileName);
-        if (fileType == null) {
-            throw new IllegalArgumentException("不支持的文件类型: " + fileName);
-        }
+        var fileType = fileTypeDetector.detect(fileName, contentType, content);
         FileContentConverter converter = converters.stream()
                 .filter(item -> item.supports(fileType))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("未找到匹配的 converter: " + fileType));
+                .orElseThrow(() -> new UnsupportedFileException("未找到匹配的 converter: " + fileType));
         try {
             DocumentConvertContext context = new DocumentConvertContext();
             context.setFileName(fileName);
@@ -54,12 +63,14 @@ public class DocumentImportServiceImpl implements DocumentImportService {
             context.setContent(content);
 
             ImportResult result = converter.convert(context);
-            if (result.getRichTextContent() != null && !result.getRichTextContent().isBlank()) {
-                return result.getRichTextContent();
+            if (result == null) {
+                throw new FileConversionException("解析结果为空: " + fileName, null);
             }
-            return "<div>" + String.join("", result.getTableHtmlList()) + "</div>";
+            return result.getHtmlContent();
+        } catch (DocumentImportException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new IllegalStateException("解析文件失败", ex);
+            throw new FileConversionException("解析文件失败: " + fileName, ex);
         }
     }
 
@@ -71,7 +82,7 @@ public class DocumentImportServiceImpl implements DocumentImportService {
         if (contentFileUrl == null || contentFileUrl.isBlank()) {
             return content;
         }
-        DownloadedFile downloadedFile = RemoteFileDownloadUtils.download(contentFileUrl);
+        DownloadedFile downloadedFile = remoteFileDownloadUtils.download(contentFileUrl);
         return importFile(downloadedFile.getFileName(), downloadedFile.getContent(), downloadedFile.getContentType());
     }
 }

@@ -2,6 +2,7 @@ package org.mohan.docimport.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.mohan.docimport.common.CommonResult;
+import org.mohan.docimport.exception.DocumentImportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理文档导入业务异常。
+     *
+     * @param exception 业务异常
+     * @param request 当前请求
+     * @return 对应状态码响应
+     */
+    @ExceptionHandler(DocumentImportException.class)
+    public ResponseEntity<CommonResult<Void>> handleDocumentImportException(
+            DocumentImportException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = resolveStatus(exception.getCode());
+        log.warn("Document import failed. uri={}, code={}, message={}",
+                request.getRequestURI(), exception.getCode(), exception.getMessage(), exception);
+        return ResponseEntity.status(status)
+                .body(CommonResult.error(exception.getCode(), exception.getMessage()));
+    }
+
+    /**
      * 处理其他未捕获异常。
      *
      * @param exception 异常对象
@@ -52,5 +72,15 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception. uri={}", request.getRequestURI(), exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(CommonResult.error(500, "服务器内部错误"));
+    }
+
+    private HttpStatus resolveStatus(int code) {
+        return switch (code) {
+            case 400 -> HttpStatus.BAD_REQUEST;
+            case 413 -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case 415 -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+            case 422 -> HttpStatus.UNPROCESSABLE_ENTITY;
+            default -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
     }
 }

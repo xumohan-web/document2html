@@ -441,3 +441,49 @@ Content-Type: application/json
 - 把不同文件格式统一收口成业务可消费的 HTML 字符串
 
 只要抓住这一点，后面无论你要接发布模块、通知模块、报告模块，还是继续扩展更多文件格式，思路都不会乱。
+
+## 18. 迭代说明
+
+从当前版本开始，每次修改代码后，都会在这里追加一段简短的迭代说明，至少记录：
+
+- 本次范围
+- 涉及文件
+- 行为变化
+- 验证结果
+
+### 2026-03-31 Iteration 1
+
+- Scope:
+  建立 converter 层的基础回归测试基线，覆盖 `txt/doc/docx/pdf/xls/xlsx` 六类格式
+- Code changes:
+  新增 `TxtFileContentConverterTest`
+  新增 `DocFileContentConverterTest`
+  新增 `DocxFileContentConverterTest`
+  新增 `ExcelFileContentConverterTest`
+  新增 `PdfFileContentConverterTest`
+  新增测试资源 `src/test/resources/samples/simple.doc`
+- Behavior locked in:
+  `txt` 段落拆分与 HTML 转义
+  `doc` 基础段落抽取
+  `docx` 基础 run 样式和表格输出
+  `excel` sheet 标题、普通单元格和公式结果输出
+  `pdf` 当前文本抽取结果以 `<br/>` 形式保留同段换行
+- Verification:
+  `mvn test`
+  结果：`Tests run: 25, Failures: 0, Errors: 0, Skipped: 0`
+
+### 2026-03-31 Iteration 2
+
+- Scope:
+  提升复杂样例场景下的保真度，先覆盖 `docx` 标题段落和 `excel` 合并单元格
+- Code changes:
+  更新 `src/main/java/org/mohan/docimport/converter/DocxFileContentConverter.java`
+  更新 `src/main/java/org/mohan/docimport/converter/ExcelFileContentConverter.java`
+  更新 `src/test/java/org/mohan/docimport/converter/DocxFileContentConverterTest.java`
+  更新 `src/test/java/org/mohan/docimport/converter/ExcelFileContentConverterTest.java`
+- Behavior changes:
+  `docx` 识别 `Heading1-6` 样式并映射为 `h1-h6`
+  `excel` 输出 merged region 的 `colspan/rowspan`
+- Verification:
+  `mvn test`
+  结果：`Tests run: 27, Failures: 0, Errors: 0, Skipped: 0`

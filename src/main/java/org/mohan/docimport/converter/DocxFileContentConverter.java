@@ -41,9 +41,7 @@ public class DocxFileContentConverter implements FileContentConverter {
                 }
             }
             html.append("</div>");
-            ImportResult result = new ImportResult();
-            result.setRichTextContent(html.toString());
-            return result;
+            return ImportResult.ofHtml(html.toString());
         }
     }
 
@@ -78,10 +76,11 @@ public class DocxFileContentConverter implements FileContentConverter {
                         .append("</span>");
             }
         }
+        String tagName = resolveParagraphTag(paragraph);
         if (builder.length() == 0) {
-            return HtmlBuilderUtils.paragraph("");
+            return "<" + tagName + "><br/></" + tagName + ">";
         }
-        return "<p>" + builder + "</p>";
+        return "<" + tagName + ">" + builder + "</" + tagName + ">";
     }
 
     /**
@@ -97,5 +96,13 @@ public class DocxFileContentConverter implements FileContentConverter {
             rows.add(cells);
         }
         return HtmlBuilderUtils.table(rows);
+    }
+
+    private String resolveParagraphTag(XWPFParagraph paragraph) {
+        String style = paragraph.getStyle();
+        if (style != null && style.matches("(?i)heading[1-6]")) {
+            return "h" + style.charAt(style.length() - 1);
+        }
+        return "p";
     }
 }

@@ -9,3 +9,10 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+
+docimport:
+  download:
+    connect-timeout: 5s
+    read-timeout: 20s
+    max-size: 20MB
+    allow-private-hosts: false

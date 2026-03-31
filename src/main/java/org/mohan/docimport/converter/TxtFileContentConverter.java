@@ -29,8 +29,6 @@ public class TxtFileContentConverter implements FileContentConverter {
                 .filter(item -> !item.isBlank())
                 .map(HtmlBuilderUtils::paragraph)
                 .collect(Collectors.joining());
-        ImportResult result = new ImportResult();
-        result.setRichTextContent(HtmlBuilderUtils.wrapDiv(html));
-        return result;
+        return ImportResult.ofHtml(HtmlBuilderUtils.wrapDiv(html));
     }
 }

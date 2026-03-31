@@ -1,16 +1,19 @@
 package org.mohan.docimport.model;
 
-import lombok.Data;
-
-import java.util.ArrayList;
-import java.util.List;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
- * 文件转换结果，既支持富文本 HTML，也支持表格 HTML 列表。
+ * 文件转换结果，统一收口为单一 HTML 输出。
  */
-@Data
+@Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ImportResult {
 
-    private String richTextContent;
-    private List<String> tableHtmlList = new ArrayList<>();
+    private final String htmlContent;
+
+    public static ImportResult ofHtml(String htmlContent) {
+        return new ImportResult(htmlContent == null ? "" : htmlContent);
+    }
 }
